@@ -1,19 +1,14 @@
 resource "aws_eks_cluster" "eks" {
-  name     = "pc-eks"
-  role_arn = aws_iam_role.master.arn
-
+  name     = "pc-eks-cluster"
+  role_arn = aws_iam_role.eks_cluster_role.arn
 
   vpc_config {
     subnet_ids = [aws_subnet.public-1.id, aws_subnet.public-2.id]
   }
 
   depends_on = [
-    aws_iam_role_policy_attachment.AmazonEKSClusterPolicy,
-    aws_iam_role_policy_attachment.AmazonEKSServicePolicy,
-    aws_iam_role_policy_attachment.AmazonEKSVPCResourceController,
-    aws_iam_role_policy_attachment.AmazonEKSVPCResourceController,
-    #aws_subnet.pub_sub1,
-    #aws_subnet.pub_sub2,
+    aws_iam_role_policy_attachment.eks_cluster_policy,
+    aws_iam_role_policy_attachment.eks_service_policy,
+    aws_iam_role_policy_attachment.eks_vpc_resource_controller
   ]
-
 }
