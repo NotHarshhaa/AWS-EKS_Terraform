@@ -1,5 +1,5 @@
-resource "aws_iam_role" "master" {
-  name = "ed-eks-master"
+resource "aws_iam_role" "eks_cluster_role" {
+  name = "eks-cluster-role"
 
   assume_role_policy = <<POLICY
 {
@@ -17,23 +17,23 @@ resource "aws_iam_role" "master" {
 POLICY
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEKSClusterPolicy" {
+resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.master.name
+  role       = aws_iam_role.eks_cluster_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEKSServicePolicy" {
+resource "aws_iam_role_policy_attachment" "eks_service_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
-  role       = aws_iam_role.master.name
+  role       = aws_iam_role.eks_cluster_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEKSVPCResourceController" {
+resource "aws_iam_role_policy_attachment" "eks_vpc_resource_controller" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
-  role       = aws_iam_role.master.name
+  role       = aws_iam_role.eks_cluster_role.name
 }
 
-resource "aws_iam_role" "worker" {
-  name = "ed-eks-worker"
+resource "aws_iam_role" "eks_worker_role" {
+  name = "eks-worker-role"
 
   assume_role_policy = <<POLICY
 {
@@ -51,8 +51,8 @@ resource "aws_iam_role" "worker" {
 POLICY
 }
 
-resource "aws_iam_policy" "autoscaler" {
-  name   = "ed-eks-autoscaler-policy"
+resource "aws_iam_policy" "eks_autoscaler_policy" {
+  name   = "eks-autoscaler-policy"
   policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -73,45 +73,45 @@ resource "aws_iam_policy" "autoscaler" {
   ]
 }
 EOF
-
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEKSWorkerNodePolicy" {
+resource "aws_iam_role_policy_attachment" "eks_worker_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEKS_CNI_Policy" {
+resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonSSMManagedInstanceCore" {
+resource "aws_iam_role_policy_attachment" "ssm_managed_instance" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEC2ContainerRegistryReadOnly" {
+resource "aws_iam_role_policy_attachment" "ecr_readonly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "x-ray" {
+resource "aws_iam_role_policy_attachment" "xray_daemon_write" {
   policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
-resource "aws_iam_role_policy_attachment" "s3" {
+
+resource "aws_iam_role_policy_attachment" "s3_readonly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "autoscaler" {
-  policy_arn = aws_iam_policy.autoscaler.arn
-  role       = aws_iam_role.worker.name
+resource "aws_iam_role_policy_attachment" "autoscaler_attachment" {
+  policy_arn = aws_iam_policy.eks_autoscaler_policy.arn
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_instance_profile" "worker" {
-  depends_on = [aws_iam_role.worker]
-  name       = "ed-eks-worker-new-profile"
-  role       = aws_iam_role.worker.name
+resource "aws_iam_instance_profile" "eks_worker_profile" {
+  depends_on = [aws_iam_role.eks_worker_role]
+  name       = "eks-worker-profile"
+  role       = aws_iam_role.eks_worker_role.name
 }
