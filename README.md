@@ -1,41 +1,63 @@
-# PROVISION EKS (Amazon Elastic Kubernetes Service) CLUSTER ON AWS USING TERRAFORM
+# 🚀 **Provision Amazon EKS Cluster on AWS using Terraform**  
 
-![aws-eks](https://imgur.com/Xa9NlJi.png)
+![EKS Banner](https://imgur.com/oU5TMcv.png)  
 
-## Introduction
+## 🔥 **Introduction**  
 
-### What is EKS?
+### 🟢 What is Amazon EKS?  
 
-**Amazon Elastic Kubernetes Service (Amazon EKS) is a managed Kubernetes service** that makes it easy for you to run Kubernetes on AWS and on-premises. Amazon EKS lets you create, update, scale, and terminate nodes for your cluster with a single command. These nodes can also leverage Amazon EC2 Spot Instances to reduce costs.
+Amazon Elastic Kubernetes Service (**Amazon EKS**) is a **fully managed** Kubernetes service that simplifies deploying, managing, and scaling containerized applications on AWS.  
 
-### What is Terraform?
+### 🟢 What is Terraform?  
 
-**Terraform is an open-source IaC software tool** that provides a consistent command line interface (CLI) workflow to manage hundreds of cloud services.
+Terraform is an **open-source Infrastructure as Code (IaC) tool** that enables declarative provisioning and management of cloud infrastructure.  
 
-## Prerequisites
+---
 
-* AWS Account(Free Tier)
-* AWS CLI
-* Terraform
-* Kubectl
-* VScode
+## ✅ **Prerequisites**  
 
-## References
+Before proceeding, ensure you have the following:  
 
-1. [Install Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli?source=post_page-----e37f4c5c66ad--------------------------------)
+- **AWS Account** (Free Tier Available)  
+- **AWS CLI** ([Install AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))  
+- **Terraform** ([Install Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli))  
+- **Kubectl** ([Install Kubectl](https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html))  
+- **VS Code** (Recommended IDE)  
 
-2. [Installing or updating kubectl](https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html?source=post_page-----e37f4c5c66ad--------------------------------)
+---
 
-3. [Terraform Registry](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs?source=post_page-----e37f4c5c66ad--------------------------------)
+## 📂 **Project Structure**  
 
-4. [Installing AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html?source=post_page-----e37f4c5c66ad--------------------------------)
+```bash
+📦 eks-cluster-terraform
+├── 📜 provider.tf               # AWS Provider Configuration
+├── 📜 eks-backend-terra.tf       # S3 Backend for Terraform State
+├── 📜 vpc.tf                     # VPC Configuration
+├── 📜 subnets.tf                 # Public Subnets
+├── 📜 internetgw.tf              # Internet Gateway
+├── 📜 route.tf                   # Route Table
+├── 📜 sg.tf                      # Security Groups
+├── 📜 iam_role.tf                # IAM Roles & Policies
+├── 📜 eks_cluster.tf             # EKS Cluster Configuration
+├── 📜 eks_node_group.tf          # EKS Worker Nodes
+└── 📜 README.md                  # Project Documentation
+```  
 
-5. [Installing or updating eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html?source=post_page-----e37f4c5c66ad--------------------------------)
+---
 
+## 📚 **References**  
 
-Let's get started.
+- **[Terraform Registry](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs)**  
+- **[AWS CLI Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)**  
+- **[EKS Documentation](https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html)**  
 
-***Warning!!! You might incur costs in your AWS account by doing this***
+🔗 _This project follows AWS best practices for EKS deployment using Terraform._  
+
+---
+
+_**Warning!!! You might incur costs in your AWS account by doing this**_
+
+## 📌 **Getting Started**
 
 Head to your AWS account and navigate to the S3 section. This is where we will store our **tf.state file** as it is considered best practice to keep our state file in a Remote Location. The primary purpose of Terraform state is to store bindings between objects in a remote system and resources declared in your configuration and I am going to keep mine in Amazon S3.
 
@@ -59,17 +81,18 @@ You can choose any name for your DynamoDB Table but it is important to note that
 
 ![aws-eks](https://miro.medium.com/v2/resize:fit:750/format:webp/1*QJZKwa4UpaqGzkl5Y5NE2w.png)
 
-### CREATE TERRAFORM FILES
+### **CREATE TERRAFORM FILES**
 
 **eks-backend-terra.tf**
 
-```yaml
+```hashicorp
 terraform {
   backend "s3" {
-    bucket = "BUCKET_NAME"
-    key    = "backend/FILE_NAME_TO_STORE_STATE.tfstate"
-    region = "us-east-1"
-    dynamodb_table = "dynamoDB_TABLE_NAME"
+    bucket         = "your-s3-bucket-name"
+    key            = "terraform/state/eks-cluster.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "your-dynamodb-table-name"
   }
 }
 ```
@@ -80,16 +103,18 @@ Name of provider AWS
 
 Our source will be defined as hashicorp/aws. This is a short abbreviation for ```registry.terraform.io/hashicorp/aws```
 
-The version is set to ~>4.66.1
+The version is set to ~>5.0
 
 Region is us-east-1
 
-```yaml
+```hashicorp
 terraform {
+  required_version = ">= 1.3.0"
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "4.66.1"
+      version = ">= 5.0"
     }
   }
 }
@@ -101,12 +126,15 @@ provider "aws" {
 
 **Vpc.tf**
 
-```yaml
+```hashicorp
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 
   tags = {
-    Name = "PC-VPC"
+    Name = "pc-vpc"
+    Environment = "dev"
   }
 }
 ```
@@ -115,26 +143,50 @@ The vpc.tf contains codes to create a new Vpc. The CIDR block is 10.0.0.0/16 and
 
 **subnets.tf**
 
-```yaml
-resource "aws_subnet" "public-1" {
+```hashicorp
+resource "aws_subnet" "public_1" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "public-sub-1"
+    Name        = "public-sub-1"
+    Environment = "dev"
   }
 }
 
-resource "aws_subnet" "public-2" {
+resource "aws_subnet" "public_2" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.2.0/24"
   availability_zone       = "us-east-1b"
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "public-sub-2"
+    Name        = "public-sub-2"
+    Environment = "dev"
+  }
+}
+
+resource "aws_subnet" "private_1" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.3.0/24"
+  availability_zone = "us-east-1a"
+
+  tags = {
+    Name        = "private-sub-1"
+    Environment = "dev"
+  }
+}
+
+resource "aws_subnet" "private_2" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.4.0/24"
+  availability_zone = "us-east-1b"
+
+  tags = {
+    Name        = "private-sub-2"
+    Environment = "dev"
   }
 }
 ```
@@ -143,42 +195,44 @@ EKS requires a minimum of two subnets to function so this is creating two public
 
 **Internetgw.tf**
 
-```yaml
-resource "aws_internet_gateway" "gw" {
+```hashicorp
+resource "aws_internet_gateway" "main_gw" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "main"
+    Name        = "main-gateway"
+    Environment = "dev"
   }
 }
 ```
 
 This will create and attach the internet gateway to the Vpc created
 
-**Rout.tf**
+**Route.tf**
 
-```yaml
-resource "aws_route_table" "rtb" {
+```hashicorp
+resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.gw.id
+    gateway_id = aws_internet_gateway.main_gw.id
   }
 
   tags = {
-    Name = "MyRoute"
+    Name        = "public-route-table"
+    Environment = "dev"
   }
 }
 
-resource "aws_route_table_association" "a-1" {
+resource "aws_route_table_association" "public_subnet_1_assoc" {
   subnet_id      = aws_subnet.public-1.id
-  route_table_id = aws_route_table.rtb.id
+  route_table_id = aws_route_table.public_rt.id
 }
 
-resource "aws_route_table_association" "a-2" {
+resource "aws_route_table_association" "public_subnet_2_assoc" {
   subnet_id      = aws_subnet.public-2.id
-  route_table_id = aws_route_table.rtb.id
+  route_table_id = aws_route_table.public_rt.id
 }
 ```
 
@@ -186,16 +240,32 @@ This will create the Route table. The route table has been associated with the t
 
 **Sg.tf**
 
-```yaml
-resource "aws_security_group" "allow_tls" {
-  name        = "allow_tls"
-  description = "Allow TLS inbound traffic"
+```hashicorp
+resource "aws_security_group" "eks_sg" {
+  name        = "eks-cluster-sg"
+  description = "Security group for EKS cluster"
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "TLS from VPC"
+    description = "Allow SSH access"
     from_port   = 22
     to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow HTTPS traffic"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow HTTP traffic"
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -208,7 +278,8 @@ resource "aws_security_group" "allow_tls" {
   }
 
   tags = {
-    Name = "allow_tls"
+    Name        = "eks-cluster-sg"
+    Environment = "dev"
   }
 }
 ```
@@ -217,9 +288,9 @@ This will create the security group attached to the created Vpc with both ingres
 
 **iam_role.tf**
 
-```yaml
-resource "aws_iam_role" "master" {
-  name = "ed-eks-master"
+```hashicorp
+resource "aws_iam_role" "eks_cluster_role" {
+  name = "eks-cluster-role"
 
   assume_role_policy = <<POLICY
 {
@@ -237,23 +308,23 @@ resource "aws_iam_role" "master" {
 POLICY
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEKSClusterPolicy" {
+resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.master.name
+  role       = aws_iam_role.eks_cluster_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEKSServicePolicy" {
+resource "aws_iam_role_policy_attachment" "eks_service_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
-  role       = aws_iam_role.master.name
+  role       = aws_iam_role.eks_cluster_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEKSVPCResourceController" {
+resource "aws_iam_role_policy_attachment" "eks_vpc_resource_controller" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
-  role       = aws_iam_role.master.name
+  role       = aws_iam_role.eks_cluster_role.name
 }
 
-resource "aws_iam_role" "worker" {
-  name = "ed-eks-worker"
+resource "aws_iam_role" "eks_worker_role" {
+  name = "eks-worker-role"
 
   assume_role_policy = <<POLICY
 {
@@ -271,8 +342,8 @@ resource "aws_iam_role" "worker" {
 POLICY
 }
 
-resource "aws_iam_policy" "autoscaler" {
-  name   = "ed-eks-autoscaler-policy"
+resource "aws_iam_policy" "eks_autoscaler_policy" {
+  name   = "eks-autoscaler-policy"
   policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -293,47 +364,47 @@ resource "aws_iam_policy" "autoscaler" {
   ]
 }
 EOF
-
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEKSWorkerNodePolicy" {
+resource "aws_iam_role_policy_attachment" "eks_worker_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEKS_CNI_Policy" {
+resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonSSMManagedInstanceCore" {
+resource "aws_iam_role_policy_attachment" "ssm_managed_instance" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "AmazonEC2ContainerRegistryReadOnly" {
+resource "aws_iam_role_policy_attachment" "ecr_readonly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "x-ray" {
+resource "aws_iam_role_policy_attachment" "xray_daemon_write" {
   policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
-resource "aws_iam_role_policy_attachment" "s3" {
+
+resource "aws_iam_role_policy_attachment" "s3_readonly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-  role       = aws_iam_role.worker.name
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "autoscaler" {
-  policy_arn = aws_iam_policy.autoscaler.arn
-  role       = aws_iam_role.worker.name
+resource "aws_iam_role_policy_attachment" "autoscaler_attachment" {
+  policy_arn = aws_iam_policy.eks_autoscaler_policy.arn
+  role       = aws_iam_role.eks_worker_role.name
 }
 
-resource "aws_iam_instance_profile" "worker" {
-  depends_on = [aws_iam_role.worker]
-  name       = "ed-eks-worker-new-profile"
-  role       = aws_iam_role.worker.name
+resource "aws_iam_instance_profile" "eks_worker_profile" {
+  depends_on = [aws_iam_role.eks_worker_role]
+  name       = "eks-worker-profile"
+  role       = aws_iam_role.eks_worker_role.name
 }
 ```
 
@@ -341,25 +412,20 @@ This will create all the necessary IAM roles and Policies for the EKS cluster. I
 
 **eks_cluster.tf**
 
-```yaml
+```hashicorp
 resource "aws_eks_cluster" "eks" {
-  name     = "pc-eks"
-  role_arn = aws_iam_role.master.arn
-
+  name     = "pc-eks-cluster"
+  role_arn = aws_iam_role.eks_cluster_role.arn
 
   vpc_config {
     subnet_ids = [aws_subnet.public-1.id, aws_subnet.public-2.id]
   }
 
   depends_on = [
-    aws_iam_role_policy_attachment.AmazonEKSClusterPolicy,
-    aws_iam_role_policy_attachment.AmazonEKSServicePolicy,
-    aws_iam_role_policy_attachment.AmazonEKSVPCResourceController,
-    aws_iam_role_policy_attachment.AmazonEKSVPCResourceController,
-    #aws_subnet.pub_sub1,
-    #aws_subnet.pub_sub2,
+    aws_iam_role_policy_attachment.eks_cluster_policy,
+    aws_iam_role_policy_attachment.eks_service_policy,
+    aws_iam_role_policy_attachment.eks_vpc_resource_controller
   ]
-
 }
 ```
 
@@ -367,36 +433,37 @@ This will create the EKS Cluster. depends_on =[ means that the EKS Cluster being
 
 **eks_node_group.tf**
 
-```yaml
-resource "aws_instance" "kubectl-server" {
+```hashicorp
+resource "aws_instance" "kubectl_server" {
   ami                         = "ami-06ca3ca175f37dd66"
-  key_name                    = "EKSKEYPAIR"
+  key_name                    = "EKS_KEY_PAIR"
   instance_type               = "t2.micro"
   associate_public_ip_address = true
   subnet_id                   = aws_subnet.public-1.id
   vpc_security_group_ids      = [aws_security_group.allow_tls.id]
 
   tags = {
-    Name = "kubectl"
+    Name = "kubectl-server"
   }
-
 }
 
-resource "aws_eks_node_group" "node-grp" {
+resource "aws_eks_node_group" "eks_node_group" {
   cluster_name    = aws_eks_cluster.eks.name
   node_group_name = "pc-node-group"
-  node_role_arn   = aws_iam_role.worker.arn
+  node_role_arn   = aws_iam_role.eks_worker_role.arn
   subnet_ids      = [aws_subnet.public-1.id, aws_subnet.public-2.id]
   capacity_type   = "ON_DEMAND"
-  disk_size       = "20"
+  disk_size       = 20
   instance_types  = ["t2.small"]
 
   remote_access {
-    ec2_ssh_key               = "EKSKEYPAIR"
+    ec2_ssh_key               = "EKS_KEY_PAIR"
     source_security_group_ids = [aws_security_group.allow_tls.id]
   }
 
-  labels = tomap({ env = "dev" })
+  labels = {
+    env = "dev"
+  }
 
   scaling_config {
     desired_size = 2
@@ -409,11 +476,9 @@ resource "aws_eks_node_group" "node-grp" {
   }
 
   depends_on = [
-    aws_iam_role_policy_attachment.AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.AmazonEKS_CNI_Policy,
-    aws_iam_role_policy_attachment.AmazonEC2ContainerRegistryReadOnly,
-    #aws_subnet.pub_sub1,
-    #aws_subnet.pub_sub2,
+    aws_iam_role_policy_attachment.eks_worker_node_policy,
+    aws_iam_role_policy_attachment.eks_cni_policy,
+    aws_iam_role_policy_attachment.ec2_container_registry_read_only
   ]
 }
 ```
@@ -531,13 +596,50 @@ kubectl get nodes
 
 And here are the two nodes.
 
-***Note: Run terraform destroy to remove all provisioned infrastructures from your AWS account so as not to incur unnecessary bills on your account. Also, remember to delete the S3 bucket and the DynamoDB table***
+_**Note: Run terraform destroy to remove all provisioned infrastructures from your AWS account so as not to incur unnecessary bills on your account. Also, remember to delete the S3 bucket and the DynamoDB table**_
 
-## CONCLUSION
+---
 
-_*This provides a comprehensive guide on provisioning an Amazon Elastic Kubernetes Service (EKS) cluster on AWS using Terraform. It covers the necessary prerequisites, creation of an S3 bucket for storing the Terraform state file, enabling state-locking with DynamoDB, creating the required Terraform files, running Terraform commands to provision the resources, verifying the created resources in the AWS account, SSH into the Kubectl server, installing AWS CLI on the server, setting up the EKS cluster using AWS CLI, and verifying the cluster’s status. By following these basic steps, we can successfully provision an EKS cluster on AWS using Terraform*_
+## **CONCLUSION**  
 
-# Hit the Star! ⭐
-***If you are planning to use this repo for learning, please hit the star. Thanks!***
+This guide provides a **step-by-step approach** to provisioning an **Amazon Elastic Kubernetes Service (EKS) cluster** on AWS using **Terraform**. It covers:  
 
-#### Author by [Harshhaa Reddy](https://github.com/NotHarshhaa)
+✅ Setting up prerequisites, including an **S3 backend for state storage** and **DynamoDB for state locking**.  
+✅ Creating **Terraform configuration files** to provision **networking, IAM roles, security groups, and the EKS cluster**.  
+✅ Running **Terraform commands** to deploy infrastructure and verifying resources in the AWS account.  
+✅ **Accessing the Kubectl server via SSH**, installing **AWS CLI & Kubectl**, and setting up cluster authentication.  
+✅ Deploying an **EKS node group** for running workloads and ensuring **high availability**.  
+✅ Verifying the **EKS cluster status** and managing it using **kubectl commands**.  
+
+By following this guide, you can **successfully deploy, configure, and manage an EKS cluster** on AWS using Terraform. 🚀  
+
+---
+
+## 🤝 **Contributing**  
+
+Contributions are welcome! If you'd like to improve this project, feel free to submit a pull request.  
+
+---
+
+## **Hit the Star!** ⭐
+
+**If you find this repository helpful and plan to use it for learning, please give it a star. Your support is appreciated!**
+
+---
+
+## 🛠️ **Author & Community**  
+
+This project is crafted by **[Harshhaa](https://github.com/NotHarshhaa)** 💡.  
+I’d love to hear your feedback! Feel free to share your thoughts.  
+
+---
+
+### 📧 **Connect with me:**
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-%230077B5.svg?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/harshhaa-vardhan-reddy) [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/NotHarshhaa)  [![Telegram](https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/prodevopsguy) [![Dev.to](https://img.shields.io/badge/Dev.to-0A0A0A?style=for-the-badge&logo=dev.to&logoColor=white)](https://dev.to/notharshhaa) [![Hashnode](https://img.shields.io/badge/Hashnode-2962FF?style=for-the-badge&logo=hashnode&logoColor=white)](https://hashnode.com/@prodevopsguy)  
+
+---
+
+### 📢 **Stay Connected**  
+
+![Follow Me](https://imgur.com/2j7GSPs.png)
